@@ -1,0 +1,9 @@
+int base = 10, altura = 5;
+
+int calcular_area() {
+    printf("", base * altura);
+}
+
+main() {
+    printf("", base);
+}

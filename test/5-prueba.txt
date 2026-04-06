@@ -1,0 +1,9 @@
+main() {
+    int a = 10, b = 20;
+    
+    // printf simple (un solo elemento)
+    printf("El valor de A es: ", a);
+    
+    // printf multiple (mezcla de strings, variables y operaciones)
+    printf("Resultado: ", "A vale ", a, " y la suma es ", a + b);
+}

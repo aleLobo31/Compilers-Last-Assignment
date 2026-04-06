@@ -1,0 +1,15 @@
+int limite = 100;
+
+main() {
+    int valor = 42, es_valido;
+    
+    // Verifica si (valor es par) Y (valor es mayor que 0) Y (valor menor o igual al limite)
+    es_valido = (valor % 2 == 0) && (valor > 0) && (valor <= limite);
+    
+    // Verifica logica con negacion
+    int alerta;
+    alerta = !(valor == 42) || (limite != 100);
+    
+    puts("es_valido");
+    puts("alerta");
+}

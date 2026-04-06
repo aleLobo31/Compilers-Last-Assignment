@@ -1,0 +1,6 @@
+int a = 5, b, c = 2;
+
+main() {
+    b = a * c + 10;
+    printf("", b);
+}

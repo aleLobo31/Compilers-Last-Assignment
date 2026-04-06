@@ -1,0 +1,16 @@
+main() {
+    int fila = 1, col;
+    
+    // Bucle externo con condicion logica compuesta
+    while (fila <= 2 && fila != 0) {
+        col = 1;
+        
+        // Bucle interno (recursividad del parser)
+        while (col <= 2) {
+            printf("Coordenada: ", fila, " - ", col);
+            col = col + 1;
+        }
+        
+        fila = fila + 1;
+    }
+}
