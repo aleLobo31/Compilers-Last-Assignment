@@ -38,6 +38,18 @@ typedef struct s_attr {
 
 #define YYSTYPE t_attr
 
+// Variables para el manejo de ámbitos y variables locales
+
+extern char current_scope[256];         // Si está vacío, estamos en ámbito global
+extern char local_vars[100][256];       // Tabla de variables locales
+extern int num_locals;                  // Contador de variables locales
+
+void add_local_var(char *name);         // Añade una variable local a la tabla
+int is_local_var(char *name);           // Comprueba si una variable es local
+char* get_var_name(char *name);         // Obtiene el nombre de una variable
+
+// ------------------------------------
+
 %}
 
 // Definitions for explicit attributes
@@ -79,9 +91,21 @@ lista_pre_main:                                      { $$.code = gen_code("") ; 
                                                        $$.code = gen_code (temp) ; }
                 ;
 
-main_funcion:   MAIN '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(defun main ()\n%s\n)", $5.code) ; 
-                                                        $$.code = gen_code (temp) ; }
-                ;
+main_funcion: 
+      MAIN '(' ')' '{' 
+        { 
+            // Acción intermedia
+            strcpy(current_scope, "main"); 
+            num_locals = 0; 
+        } 
+      lista_sentencias '}' 
+        { 
+            // Acción final
+            sprintf (temp, "(defun main ()\n%s\n)", $6.code) ; 
+            $$.code = gen_code (temp) ; 
+            strcpy(current_scope, ""); 
+        }
+    ;
 
 
 lista_sentencias:                                   { $$.code = gen_code("") ; }
@@ -101,12 +125,17 @@ funcion: INTEGER IDENTIF '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(def
                                                             $$.code = gen_code (temp) ; }
         ;
 
-sentencia:    declaracion                                       { $$ = $1 ; }
-            | IDENTIF '=' expresion                             { sprintf (temp, "(setq %s %s)", $1.code, $3.code) ; 
-                                                                $$.code = gen_code (temp) ; }
-            | PRINTF '('STRING lista_elementos ')'              { $$ = $4 ; }
-            | PUTS '(' STRING ')'                               { sprintf (temp, "(print \"%s\")", $3.code) ;  
-                                                                $$.code = gen_code (temp) ; }
+sentencia:    declaracion                         { $$ = $1 ; }
+            | IDENTIF '=' expresion               { 
+                    char *var_name = get_var_name($1.code);
+                    sprintf (temp, "(setf %s %s)", var_name, $3.code) ; 
+                    $$.code = gen_code (temp) ; 
+                }
+            | PRINTF '('STRING lista_elementos ')'{ $$ = $4 ; }
+            | PUTS '(' STRING ')'                 { 
+                    sprintf (temp, "(print \"%s\")", $3.code) ;  
+                    $$.code = gen_code (temp) ; 
+                }
             ;
 
 bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (temp, "(loop while %s do\n%s)", $3.code, $6.code) ;
@@ -132,10 +161,20 @@ lista_vars:   var_init                   { $$ = $1 ; }
                                            $$.code = gen_code (temp) ; }
             ;
 
-var_init:     IDENTIF                    { sprintf (temp, "(setq %s 0)", $1.code) ;
-                                           $$.code = gen_code (temp) ; }
-            | IDENTIF '=' NUMBER         { sprintf (temp, "(setq %s %d)", $1.code, $3.value) ;
-                                           $$.code = gen_code (temp) ; }
+var_init:     IDENTIF 
+                { 
+                    if (strlen(current_scope) > 0) add_local_var($1.code);
+                    char *var_name = get_var_name($1.code);
+                    sprintf (temp, "(setq %s 0)", var_name) ;
+                    $$.code = gen_code (temp) ; 
+                }
+            | IDENTIF '=' NUMBER 
+                { 
+                    if (strlen(current_scope) > 0) add_local_var($1.code);
+                    char *var_name = get_var_name($1.code);
+                    sprintf (temp, "(setq %s %d)", var_name, $3.value) ;
+                    $$.code = gen_code (temp) ; 
+                }
             ;
           
 expresion:      termino                    { $$ = $1 ; }
@@ -175,11 +214,13 @@ termino:        operando                           { $$ = $1 ; }
                                                     $$.code = gen_code (temp) ; }    
             ;
 
-operando:       IDENTIF                  { sprintf (temp, "%s", $1.code) ;
-                                           $$.code = gen_code (temp) ; }
-            |   NUMBER                   { sprintf (temp, "%d", $1.value) ;
-                                           $$.code = gen_code (temp) ; }
-            |   '(' expresion ')'        { $$ = $2 ; }
+operando:   IDENTIF                  { 
+                char *var_name = get_var_name($1.code);
+                sprintf (temp, "%s", var_name) ;
+                $$.code = gen_code (temp) ; 
+            }
+            | NUMBER                   { sprintf (temp, "%d", $1.value) ; $$.code = gen_code (temp) ; }
+            | '(' expresion ')'        { $$ = $2 ; }
             ;
 
 
@@ -228,6 +269,30 @@ char *my_malloc (int nbytes)       // reserva n bytes de memoria dinamica
     nv++ ;
 
     return p ;
+}
+
+char current_scope[256] = ""; // Si está vacío, estamos en ámbito global
+char local_vars[100][256];    // Tabla de variables locales
+int num_locals = 0;           // Contador de variables locales
+
+void add_local_var(char *name) {
+    strcpy(local_vars[num_locals++], name);
+}
+
+int is_local_var(char *name) {
+    for (int i = 0; i < num_locals; i++) {
+        if (strcmp(local_vars[i], name) == 0) return 1;
+    }
+    return 0;
+}
+
+char* get_var_name(char *name) {
+    char temp_name[512];
+    if (strlen(current_scope) > 0 && is_local_var(name)) {
+        sprintf(temp_name, "%s_%s", current_scope, name);
+        return gen_code(temp_name);
+    }
+    return gen_code(name);
 }
 
 

@@ -1,0 +1,18 @@
+int global_var = 100;
+int a;
+
+main() {
+    // Declaraciones locales
+    int a = 5;
+    int b = 20;
+
+    // Asignaciones (deberian usar setf)
+    a = a + b;
+    global_var = global_var + 1;
+
+    // Impresiones
+    printf("%d", a);
+    puts(" <- Valor de la variable local a");
+    printf("%d", global_var);
+    puts(" <- Valor de la variable global");
+}
