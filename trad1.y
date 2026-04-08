@@ -48,6 +48,8 @@ typedef struct s_attr {
 %token STRING
 %token MAIN          // identifica el comienzo del proc. main
 %token WHILE         // identifica el bucle while
+%token IF            // identifica el if
+%token ELSE          // identifica el else
 %token PUTS          // identifica la orden de impresión puts 
 %token PRINTF        // identifica la orden de impresión printf
 %token AND           // &&
@@ -95,6 +97,11 @@ lista_sentencias:                                   { $$.code = gen_code("") ; }
                                                       else 
                                                           sprintf (temp, "%s\n%s", $1.code, $2.code) ;
                                                       $$.code = gen_code (temp) ; }
+                | lista_sentencias bloque_condicional { if (strlen($1.code) == 0) 
+                                                          sprintf (temp, "%s", $2.code) ;
+                                                      else 
+                                                          sprintf (temp, "%s\n%s", $1.code, $2.code) ;
+                                                      $$.code = gen_code (temp) ; }
                 ;
 
 funcion: INTEGER IDENTIF '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(defun %s ()\n%s)\n", $2.code, $6.code) ; 
@@ -112,6 +119,24 @@ sentencia:    declaracion                                       { $$ = $1 ; }
 bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (temp, "(loop while %s do\n%s)", $3.code, $6.code) ;
                                                                   $$.code = gen_code (temp) ; }
             ;
+
+bloque_condicional: IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
+                    { 
+                        if (strlen($8.code) == 0) {
+                            // Caso: IF sin ELSE
+                            sprintf (temp, "(if %s\n (progn\n  %s\n ))", $3.code, $6.code) ;
+                        } else {
+                            // Caso: IF con ELSE
+                            sprintf (temp, "(if %s\n (progn\n  %s\n )\n %s)", $3.code, $6.code, $8.code) ;
+                        }
+                        $$.code = gen_code (temp) ; 
+                    }
+                  ;
+
+resto_condicional:                                   { $$.code = gen_code ("") ; }
+                 | ELSE '{' lista_sentencias '}'     { sprintf (temp, "(progn\n  %s\n )", $3.code) ;
+                                                       $$.code = gen_code (temp) ; }
+                 ;
 
 declaracion:  INTEGER lista_vars         { $$ = $2 ; }
             ;
@@ -244,6 +269,8 @@ t_keyword keywords [] = { // define las palabras reservadas y los
     "main",        MAIN,           // y los token asociados
     "int",         INTEGER,
     "while",       WHILE,
+    "if",          IF,
+    "else",        ELSE,
     "puts",        PUTS,
     "printf",      PRINTF,
     "&&",          AND,

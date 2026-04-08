@@ -1,3 +1,3 @@
 main() {
-    printf("", 100);
+    printf("valor=%d", x);
 }
