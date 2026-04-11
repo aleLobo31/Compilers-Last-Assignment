@@ -1,0 +1,28 @@
+int i, j, x, y, z;
+
+main() {
+    // CEV9.1: Bucle For con Incremento
+    puts("--- Prueba 9.1 ---");
+    for (i = 0; i < 3; INC(i)) {
+        printf("Inc: ", i);
+    }
+
+    // CEV9.2: Bucle For con Decremento
+    puts("--- Prueba 9.2 ---");
+    for (j = 2; j >= 0; DEC(j)) {
+        printf("Dec: ", j);
+    }
+
+    // CEV9.3: Bucle For Anidado
+    puts("--- Prueba 9.3 ---");
+    for (x = 0; x < 2; INC(x)) {
+        for (y = 0; y < 2; INC(y)) {
+            printf("Coord: ", x, y);
+        }
+    }
+
+    // CENV9.4: Bucle For Vacío
+    puts("--- Prueba 9.4 ---");
+    for (z = 0; z < 5; INC(z)) {
+    }
+}

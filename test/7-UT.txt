@@ -1,0 +1,33 @@
+int opcion = 2, vacio = 0;
+
+main() {
+    // CEV10.1: Switch con un Caso (Caso base)
+    puts("--- Prueba 10.1 ---");
+    switch(opcion) {
+        case 1: 
+            puts("Has elegido 1"); 
+            break;
+    }
+
+    // CEV10.2 (Múltiples Casos) y CEV10.3 (Con Default)
+    // El caso de uso más estándar de un switch
+    puts("--- Pruebas 10.2 y 10.3 ---");
+    switch(opcion) {
+        case 1:
+            puts("Iniciando partida");
+            break;
+        case 2:
+            puts("Cargando partida");
+            opcion = 0;
+            break;
+        default:
+            puts("Opcion no valida");
+            break;
+    }
+
+    // CENV10.4: Switch Vacío
+    // Comprobamos que el compilador no crashea si no hay cases
+    puts("--- Prueba 10.4 ---");
+    switch(vacio) {
+    }
+}

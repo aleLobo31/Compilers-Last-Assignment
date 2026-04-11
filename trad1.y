@@ -13,6 +13,9 @@ char *mi_malloc (int) ;
 char *gen_code (char *) ;
 char *int_to_string (int) ;
 char *char_to_string (char) ;
+char *generar_if (char *, char *, char *) ;
+char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, char *body);
+char *my_malloc (int) ;
 
 char temp [2048] ;
 
@@ -37,6 +40,8 @@ typedef struct s_attr {
 } t_attr ;
 
 #define YYSTYPE t_attr
+#define INC(x) x=x+1
+#define DEC(x) x=x-1
 
 %}
 
@@ -50,6 +55,13 @@ typedef struct s_attr {
 %token WHILE         // identifica el bucle while
 %token IF            // identifica el if
 %token ELSE          // identifica el else
+%token FOR           // identifica el for
+%token INC           // identifica el incremento
+%token DEC           // identifica el decremento
+%token SWITCH        // identifica el switch
+%token CASE          // identifica el case
+%token DEFAULT       // identifica el default
+%token BREAK         // identifica el break
 %token PUTS          // identifica la orden de impresión puts 
 %token PRINTF        // identifica la orden de impresión printf
 %token AND           // &&
@@ -97,12 +109,6 @@ lista_sentencias:                                   { $$.code = gen_code("") ; }
                                                       else 
                                                           sprintf (temp, "%s\n%s", $1.code, $2.code) ;
                                                       $$.code = gen_code (temp) ; }
-                | lista_sentencias bloque_condicional { if (strlen($1.code) == 0) 
-                                                          sprintf (temp, "%s", $2.code) ;
-                                                      else 
-                                                          sprintf (temp, "%s\n%s", $1.code, $2.code) ;
-                                                      $$.code = gen_code (temp) ; }
-                ;
 
 funcion: INTEGER IDENTIF '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(defun %s ()\n%s)\n", $2.code, $6.code) ; 
                                                             $$.code = gen_code (temp) ; }
@@ -118,25 +124,43 @@ sentencia:    declaracion                                       { $$ = $1 ; }
 
 bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (temp, "(loop while %s do\n%s)", $3.code, $6.code) ;
                                                                   $$.code = gen_code (temp) ; }
-            ;
+                | FOR '(' IDENTIF '=' expresion ';' expresion ';' iteracion ')' '{' lista_sentencias '}'
+                        { $$.code = generar_for($3.code, $5.code, $7.code, $9.code, $12.code) ; }
+            
+                | IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
+                        { $$.code = generar_if($3.code, $6.code, $8.code) ; }
+                
+                | SWITCH '(' IDENTIF ')' '{' lista_cases default_case '}' 
+                        { sprintf (temp, "(case %s\n%s\n%s)", $3.code, $6.code, $7.code) ; 
+                          $$.code = gen_code (temp) ; }
+                ;
 
-bloque_condicional: IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
-                    { 
-                        if (strlen($8.code) == 0) {
-                            // Caso: IF sin ELSE
-                            sprintf (temp, "(if %s\n (progn\n  %s\n ))", $3.code, $6.code) ;
-                        } else {
-                            // Caso: IF con ELSE
-                            sprintf (temp, "(if %s\n (progn\n  %s\n )\n %s)", $3.code, $6.code, $8.code) ;
-                        }
-                        $$.code = gen_code (temp) ; 
-                    }
-                  ;
+resto_condicional:                                  { $$.code = gen_code ("") ; }
+                | ELSE '{' lista_sentencias '}'     { $$ = $3 ; }
+                ;
 
-resto_condicional:                                   { $$.code = gen_code ("") ; }
-                 | ELSE '{' lista_sentencias '}'     { sprintf (temp, "(progn\n  %s\n )", $3.code) ;
-                                                       $$.code = gen_code (temp) ; }
-                 ;
+lista_cases:            { $$.code = gen_code ("") ; }                                        
+                | lista_cases base_case 
+                        { sprintf (temp, "%s %s", $1.code, $2.code) ; 
+                        $$.code = gen_code (temp) ; }
+                ;
+
+base_case:      CASE NUMBER ':' lista_sentencias BREAK ';'
+                    { sprintf (temp, "(%d\n  %s)", $2.value, $4.code) ; 
+                    $$.code = gen_code (temp) ; }
+                ;
+
+default_case:       { $$.code = gen_code ("") ; }
+                | DEFAULT ':' lista_sentencias BREAK ';'     
+                    { sprintf (temp, "(otherwise\n  %s)", $3.code) ; 
+                    $$.code = gen_code (temp) ; }
+                ;
+
+iteracion:   INC '(' IDENTIF ')' { sprintf(temp, "(setf %s (+ %s 1))", $3.code, $3.code); 
+                                     $$.code = gen_code(temp); }
+             | DEC '(' IDENTIF ')' { sprintf(temp, "(setf %s (- %s 1))", $3.code, $3.code); 
+                                     $$.code = gen_code(temp); }
+             ;
 
 declaracion:  INTEGER lista_vars         { $$ = $2 ; }
             ;
@@ -213,6 +237,7 @@ operando:       IDENTIF                  { sprintf (temp, "%s", $1.code) ;
 int n_line = 1 ;
 
 int yyerror (mensaje)
+
 char *mensaje ;
 {
     fprintf (stderr, "%s en la linea %d\n", mensaje, n_line) ;
@@ -235,6 +260,64 @@ char *char_to_string (char c)
     sprintf (ltemp, "%c", c) ;
 
     return gen_code (ltemp) ;
+}
+
+char *generar_if(char *condicion, char *rama_then, char *rama_else) 
+{
+    // Reservamos la memoria máxima segura (los 3 strings + margen) para bloques con múltiples instrucciones
+    int max_len = strlen(condicion) + strlen(rama_then) + strlen(rama_else) + 100;
+    char *resultado = (char *) my_malloc(max_len);
+    
+    char *then_branch = rama_then;
+    char *else_branch = rama_else;
+
+    // Evaluamos la rama THEN buscando el salto de línea (porque entre sentencias hay un salto de línea)
+    if (strchr(rama_then, '\n') != NULL) {
+        then_branch = (char *) my_malloc(strlen(rama_then) + 20);
+        sprintf(then_branch, "(progn\n%s)", rama_then);
+    }
+
+    // Evaluamos la rama ELSE (si existe)
+    if (strlen(rama_else) > 0) {
+        if (strchr(rama_else, '\n') != NULL) {
+            else_branch = (char *) my_malloc(strlen(rama_else) + 20);
+            sprintf(else_branch, "(progn\n%s)", rama_else);
+        }
+        // Juntamos la versión con ELSE
+        sprintf(resultado, "(if %s\n %s\n %s)", condicion, then_branch, else_branch);
+    } else {
+        // Juntamos la versión sin ELSE
+        sprintf(resultado, "(if %s\n %s)", condicion, then_branch);
+    }
+
+    return gen_code(resultado);
+}
+
+char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, char *body)
+{
+    char *init_code;
+    char *loop_body;
+    int max_len;
+    char *resultado;
+
+    // Desenrrollamos la primera parte del bucle con la inicialización del iterador
+    init_code = (char *) my_malloc(strlen(id) + strlen(init_expr) + 20);
+    sprintf(init_code, "(setf %s %s)", id, init_expr);
+
+    // Agregamos al final del cuerpo del bucle la iteracion y contemplamos caso de for vacío
+    if (strlen(body) > 0) {
+        loop_body = (char *) my_malloc(strlen(body) + strlen(iteration) + 10);
+        sprintf(loop_body, "%s\n %s", body, iteration);
+    } else {
+        loop_body = iteration;
+    }
+
+    // Juntamos las dos partes y reservamos memoria
+    max_len = strlen(init_code) + strlen(cond_expr) + strlen(loop_body) + 50;
+    resultado = (char *) my_malloc(max_len);
+    sprintf(resultado, "%s\n(loop while %s do\n %s)", init_code, cond_expr, loop_body);
+
+    return gen_code(resultado);
 }
 
 char *my_malloc (int nbytes)       // reserva n bytes de memoria dinamica
@@ -271,6 +354,13 @@ t_keyword keywords [] = { // define las palabras reservadas y los
     "while",       WHILE,
     "if",          IF,
     "else",        ELSE,
+    "for",         FOR,
+    "inc",         INC,
+    "dec",         DEC,
+    "switch",      SWITCH,
+    "case",        CASE,
+    "default",     DEFAULT,
+    "break",       BREAK,     
     "puts",        PUTS,
     "printf",      PRINTF,
     "&&",          AND,
