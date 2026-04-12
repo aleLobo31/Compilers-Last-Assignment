@@ -43,6 +43,18 @@ typedef struct s_attr {
 #define INC(x) x=x+1
 #define DEC(x) x=x-1
 
+// Variables para el manejo de ámbitos y variables locales
+
+extern char current_scope[256];         // Si está vacío, estamos en ámbito global
+extern char local_vars[100][256];       // Tabla de variables locales
+extern int num_locals;                  // Contador de variables locales
+
+void add_local_var(char *name);         // Añade una variable local a la tabla
+int is_local_var(char *name);           // Comprueba si una variable es local
+char* get_var_name(char *name);         // Obtiene el nombre de una variable
+
+// ------------------------------------
+
 %}
 
 // Definitions for explicit attributes
@@ -52,6 +64,7 @@ typedef struct s_attr {
 %token INTEGER       // identifica el tipo entero
 %token STRING
 %token MAIN          // identifica el comienzo del proc. main
+%token RETURN        // identifica el return
 %token WHILE         // identifica el bucle while
 %token IF            // identifica el if
 %token ELSE          // identifica el else
@@ -93,9 +106,21 @@ lista_pre_main:                                      { $$.code = gen_code("") ; 
                                                        $$.code = gen_code (temp) ; }
                 ;
 
-main_funcion:   MAIN '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(defun main ()\n%s\n)", $5.code) ; 
-                                                        $$.code = gen_code (temp) ; }
-                ;
+main_funcion: 
+      MAIN '(' ')' '{' 
+        { 
+            // Acción intermedia
+            strcpy(current_scope, "main"); 
+            num_locals = 0; 
+        } 
+      lista_sentencias '}' 
+        { 
+            // Acción final
+            sprintf (temp, "(defun main ()\n%s\n)", $6.code) ; 
+            $$.code = gen_code (temp) ; 
+            strcpy(current_scope, ""); 
+        }
+    ;
 
 
 lista_sentencias:                                   { $$.code = gen_code("") ; }
@@ -110,22 +135,70 @@ lista_sentencias:                                   { $$.code = gen_code("") ; }
                                                           sprintf (temp, "%s\n%s", $1.code, $2.code) ;
                                                       $$.code = gen_code (temp) ; }
 
-funcion: INTEGER IDENTIF '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(defun %s ()\n%s)\n", $2.code, $6.code) ; 
-                                                            $$.code = gen_code (temp) ; }
-        ;
+funcion: 
+        IDENTIF '(' lista_parametros ')' '{' 
+        { 
+            strcpy(current_scope, $1.code);
+            num_locals = 0; 
+        } 
+        lista_sentencias '}' 
+        { 
+            sprintf (temp, "(defun %s (%s)\n%s)\n", $1.code, $3.code, $7.code) ; 
+            $$.code = gen_code (temp) ; 
+            strcpy(current_scope, ""); 
+        }
+    ;
 
-sentencia:    declaracion                                       { $$ = $1 ; }
-            | IDENTIF '=' expresion                             { sprintf (temp, "(setq %s %s)", $1.code, $3.code) ; 
-                                                                $$.code = gen_code (temp) ; }
-            | PRINTF '('STRING lista_elementos ')'              { $$ = $4 ; }
-            | PUTS '(' STRING ')'                               { sprintf (temp, "(print \"%s\")", $3.code) ;  
-                                                                $$.code = gen_code (temp) ; }
+lista_parametros:
+                            { $$.code = gen_code(""); }
+    | param                 { $$ = $1; }
+    | lista_parametros ',' param { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
+    ;
+
+param: 
+      INTEGER IDENTIF      
+        { 
+            add_local_var($2.code);
+            $$.code = gen_code($2.code); 
+        }
+    ;
+
+sentencia:    declaracion                         { $$ = $1 ; }
+            | IDENTIF '=' expresion               { 
+                    char *var_name = get_var_name($1.code);
+                    sprintf (temp, "(setf %s %s)", var_name, $3.code) ; 
+                    $$.code = gen_code (temp) ; 
+                }
+            | IDENTIF '[' expresion ']' '=' expresion
+                {
+                    char *var_name = get_var_name($1.code);
+                    sprintf(temp, "(setf (aref %s %s) %s)", var_name, $3.code, $6.code);
+                    $$.code = gen_code(temp);
+                }
+            | PRINTF '('STRING lista_elementos ')'{ $$ = $4 ; }
+            | PUTS '(' STRING ')'                 { 
+                    sprintf (temp, "(print \"%s\")", $3.code) ;  
+                    $$.code = gen_code (temp) ; 
+                }
+            | RETURN expresion 
+                { 
+                    sprintf(temp, "(return-from %s %s)", current_scope, $2.code);
+                    $$.code = gen_code(temp);
+                }
+            | IDENTIF '(' lista_argumentos ')' 
+                { 
+                    sprintf(temp, "(%s %s)", $1.code, $3.code);
+                    $$.code = gen_code(temp);
+                }
             ;
 
 bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (temp, "(loop while %s do\n%s)", $3.code, $6.code) ;
                                                                   $$.code = gen_code (temp) ; }
                 | FOR '(' IDENTIF '=' expresion ';' expresion ';' iteracion ')' '{' lista_sentencias '}'
-                        { $$.code = generar_for($3.code, $5.code, $7.code, $9.code, $12.code) ; }
+                        { 
+                            char *name = get_var_name($3.code);
+                            $$.code = generar_for(name, $5.code, $7.code, $9.code, $12.code) ; 
+                        }
             
                 | IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
                         { $$.code = generar_if($3.code, $6.code, $8.code) ; }
@@ -156,9 +229,11 @@ default_case:       { $$.code = gen_code ("") ; }
                     $$.code = gen_code (temp) ; }
                 ;
 
-iteracion:   INC '(' IDENTIF ')' { sprintf(temp, "(setf %s (+ %s 1))", $3.code, $3.code); 
+iteracion:   INC '(' IDENTIF ')' {  char *name = get_var_name($3.code);
+                                    sprintf(temp, "(setf %s (+ %s 1))", name, name); 
                                      $$.code = gen_code(temp); }
-             | DEC '(' IDENTIF ')' { sprintf(temp, "(setf %s (- %s 1))", $3.code, $3.code); 
+             | DEC '(' IDENTIF ')' {  char *name = get_var_name($3.code);
+                                    sprintf(temp, "(setf %s (- %s 1))", name, name); 
                                      $$.code = gen_code(temp); }
              ;
 
@@ -181,10 +256,27 @@ lista_vars:   var_init                   { $$ = $1 ; }
                                            $$.code = gen_code (temp) ; }
             ;
 
-var_init:     IDENTIF                    { sprintf (temp, "(setq %s 0)", $1.code) ;
-                                           $$.code = gen_code (temp) ; }
-            | IDENTIF '=' NUMBER         { sprintf (temp, "(setq %s %d)", $1.code, $3.value) ;
-                                           $$.code = gen_code (temp) ; }
+var_init:     IDENTIF 
+                { 
+                    if (strlen(current_scope) > 0) add_local_var($1.code);
+                    char *var_name = get_var_name($1.code);
+                    sprintf (temp, "(setq %s 0)", var_name) ;
+                    $$.code = gen_code (temp) ; 
+                }
+            | IDENTIF '=' NUMBER 
+                { 
+                    if (strlen(current_scope) > 0) add_local_var($1.code);
+                    char *var_name = get_var_name($1.code);
+                    sprintf (temp, "(setq %s %d)", var_name, $3.value) ;
+                    $$.code = gen_code (temp) ; 
+                }
+            | IDENTIF '[' NUMBER ']'
+            {
+                if (strlen(current_scope) > 0) add_local_var($1.code);
+                char *var_name = get_var_name($1.code);
+                sprintf (temp, "(setq %s (make-array %d))", var_name, $3.value);
+                $$.code = gen_code (temp);
+            }
             ;
           
 expresion:      termino                    { $$ = $1 ; }
@@ -224,13 +316,31 @@ termino:        operando                           { $$ = $1 ; }
                                                     $$.code = gen_code (temp) ; }    
             ;
 
-operando:       IDENTIF                  { sprintf (temp, "%s", $1.code) ;
-                                           $$.code = gen_code (temp) ; }
-            |   NUMBER                   { sprintf (temp, "%d", $1.value) ;
-                                           $$.code = gen_code (temp) ; }
-            |   '(' expresion ')'        { $$ = $2 ; }
+operando:   IDENTIF                  { 
+                char *var_name = get_var_name($1.code);
+                sprintf (temp, "%s", var_name) ;
+                $$.code = gen_code (temp) ; 
+            }
+            | NUMBER                   { sprintf (temp, "%d", $1.value) ; $$.code = gen_code (temp) ; }
+            | '(' expresion ')'        { $$ = $2 ; }
+            | IDENTIF '(' lista_argumentos ')' 
+                { 
+                    sprintf(temp, "(%s %s)", $1.code, $3.code);
+                    $$.code = gen_code(temp);
+                }
+            | IDENTIF '[' expresion ']'
+                {
+                    char *var_name = get_var_name($1.code);
+                    sprintf(temp, "(aref %s %s)", var_name, $3.code);
+                    $$.code = gen_code(temp);
+                }
             ;
 
+lista_argumentos:
+                            { $$.code = gen_code(""); }
+            | expresion             { $$ = $1; }
+            | lista_argumentos ',' expresion { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
+            ;
 
 %%                            // SECCION 4    Codigo en C
 
@@ -268,6 +378,8 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
     int max_len = strlen(condicion) + strlen(rama_then) + strlen(rama_else) + 100;
     char *resultado = (char *) my_malloc(max_len);
     
+    char *then_alloc = NULL;
+    char *else_alloc = NULL;
     char *then_branch = rama_then;
     char *else_branch = rama_else;
 
@@ -275,6 +387,7 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
     if (strchr(rama_then, '\n') != NULL) {
         then_branch = (char *) my_malloc(strlen(rama_then) + 20);
         sprintf(then_branch, "(progn\n%s)", rama_then);
+        then_alloc = then_branch;
     }
 
     // Evaluamos la rama ELSE (si existe)
@@ -282,6 +395,7 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
         if (strchr(rama_else, '\n') != NULL) {
             else_branch = (char *) my_malloc(strlen(rama_else) + 20);
             sprintf(else_branch, "(progn\n%s)", rama_else);
+            else_alloc = else_branch;
         }
         // Juntamos la versión con ELSE
         sprintf(resultado, "(if %s\n %s\n %s)", condicion, then_branch, else_branch);
@@ -290,13 +404,19 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
         sprintf(resultado, "(if %s\n %s)", condicion, then_branch);
     }
 
-    return gen_code(resultado);
+    char *final = gen_code(resultado);
+
+    free(resultado);
+    if (then_alloc) free(then_alloc); // Liberamos la memoria
+    if (else_alloc) free(else_alloc); // Liberamos la memoria
+    return final;
 }
 
 char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, char *body)
 {
     char *init_code;
     char *loop_body;
+    char *loop_alloc = NULL;
     int max_len;
     char *resultado;
 
@@ -307,6 +427,7 @@ char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, c
     // Agregamos al final del cuerpo del bucle la iteracion y contemplamos caso de for vacío
     if (strlen(body) > 0) {
         loop_body = (char *) my_malloc(strlen(body) + strlen(iteration) + 10);
+        loop_alloc = loop_body;
         sprintf(loop_body, "%s\n %s", body, iteration);
     } else {
         loop_body = iteration;
@@ -317,7 +438,12 @@ char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, c
     resultado = (char *) my_malloc(max_len);
     sprintf(resultado, "%s\n(loop while %s do\n %s)", init_code, cond_expr, loop_body);
 
-    return gen_code(resultado);
+    char *final = gen_code(resultado);
+
+    free(resultado);
+    if (init_code) free(init_code); // Liberamos la memoria
+    if (loop_alloc) free(loop_alloc); // Liberamos la memoria
+    return final;
 }
 
 char *my_malloc (int nbytes)       // reserva n bytes de memoria dinamica
@@ -338,6 +464,30 @@ char *my_malloc (int nbytes)       // reserva n bytes de memoria dinamica
     return p ;
 }
 
+char current_scope[256] = ""; // Si está vacío, estamos en ámbito global
+char local_vars[100][256];    // Tabla de variables locales
+int num_locals = 0;           // Contador de variables locales
+
+void add_local_var(char *name) {
+    strcpy(local_vars[num_locals++], name);
+}
+
+int is_local_var(char *name) {
+    for (int i = 0; i < num_locals; i++) {
+        if (strcmp(local_vars[i], name) == 0) return 1;
+    }
+    return 0;
+}
+
+char* get_var_name(char *name) {
+    char temp_name[512];
+    if (strlen(current_scope) > 0 && is_local_var(name)) {
+        sprintf(temp_name, "%s_%s", current_scope, name);
+        return gen_code(temp_name);
+    }
+    return gen_code(name);
+}
+
 
 /***************************************************************************/
 /********************** Seccion de Palabras Reservadas *********************/
@@ -350,6 +500,7 @@ typedef struct s_keyword { // para las palabras reservadas de C
 
 t_keyword keywords [] = { // define las palabras reservadas y los
     "main",        MAIN,           // y los token asociados
+    "return",      RETURN,
     "int",         INTEGER,
     "while",       WHILE,
     "if",          IF,

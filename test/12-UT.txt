@@ -1,0 +1,15 @@
+int global[3];
+
+main() {
+    int local[2];
+    
+    // 1. Probar asignación (Receptor)
+    global[0] = 55;
+    local[1] = 99;
+
+    // 2. Probar acceso (Operando)
+    printf("Global pos 0: %d", global[0]);
+    puts("");
+    printf("Local pos 1: %d", local[1]);
+}
+//@(main)
