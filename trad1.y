@@ -169,6 +169,12 @@ sentencia:    declaracion                         { $$ = $1 ; }
                     sprintf (temp, "(setf %s %s)", var_name, $3.code) ; 
                     $$.code = gen_code (temp) ; 
                 }
+            | IDENTIF '[' expresion ']' '=' expresion
+                {
+                    char *var_name = get_var_name($1.code);
+                    sprintf(temp, "(setf (aref %s %s) %s)", var_name, $3.code, $6.code);
+                    $$.code = gen_code(temp);
+                }
             | PRINTF '('STRING lista_elementos ')'{ $$ = $4 ; }
             | PUTS '(' STRING ')'                 { 
                     sprintf (temp, "(print \"%s\")", $3.code) ;  
@@ -264,6 +270,13 @@ var_init:     IDENTIF
                     sprintf (temp, "(setq %s %d)", var_name, $3.value) ;
                     $$.code = gen_code (temp) ; 
                 }
+            | IDENTIF '[' NUMBER ']'
+            {
+                if (strlen(current_scope) > 0) add_local_var($1.code);
+                char *var_name = get_var_name($1.code);
+                sprintf (temp, "(setq %s (make-array %d))", var_name, $3.value);
+                $$.code = gen_code (temp);
+            }
             ;
           
 expresion:      termino                    { $$ = $1 ; }
@@ -313,6 +326,12 @@ operando:   IDENTIF                  {
             | IDENTIF '(' lista_argumentos ')' 
                 { 
                     sprintf(temp, "(%s %s)", $1.code, $3.code);
+                    $$.code = gen_code(temp);
+                }
+            | IDENTIF '[' expresion ']'
+                {
+                    char *var_name = get_var_name($1.code);
+                    sprintf(temp, "(aref %s %s)", var_name, $3.code);
                     $$.code = gen_code(temp);
                 }
             ;
