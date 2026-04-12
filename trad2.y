@@ -1,3 +1,8 @@
+/*
+202 , Alejandro Pérez Montes , Alejandro De Santos Lobo
+100499978@alumnos.uc3m.es ,  100499148@alumnos.uc3m.es
+*/
+
 %{                          // SECCION 1 Declaraciones de C-Yacc
 
 #include <stdio.h>
