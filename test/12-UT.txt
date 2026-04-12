@@ -1,13 +1,15 @@
+// CEV12.1: Declaración de vector global
 int global[3];
 
 main() {
+    // CEV12.2: Declaración de vector local
     int local[2];
     
-    // 1. Probar asignación (Receptor)
+    // CEV12.3: Asignación a posición de vector (Rol de Receptor)
     global[0] = 55;
     local[1] = 99;
-
-    // 2. Probar acceso (Operando)
+    
+    // CEV12.4: Acceso a posición de vector (Rol de Operando)
     printf("Global pos 0: %d", global[0]);
     puts("");
     printf("Local pos 1: %d", local[1]);

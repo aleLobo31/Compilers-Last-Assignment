@@ -2,7 +2,8 @@ int global_var = 100;
 int a;
 
 main() {
-    // Declaraciones locales
+    // CEV8.1: Variables locales con prefijo de ámbito
+    // CEV8.2: Conflicto de nombres (Shadowing: a global vs a local)
     int a = 5;
     int b = 20;
 
