@@ -64,6 +64,7 @@ char* get_var_name(char *name);         // Obtiene el nombre de una variable
 %token INTEGER       // identifica el tipo entero
 %token STRING
 %token MAIN          // identifica el comienzo del proc. main
+%token RETURN        // identifica el return
 %token WHILE         // identifica el bucle while
 %token IF            // identifica el if
 %token ELSE          // identifica el else
@@ -134,9 +135,33 @@ lista_sentencias:                                   { $$.code = gen_code("") ; }
                                                           sprintf (temp, "%s\n%s", $1.code, $2.code) ;
                                                       $$.code = gen_code (temp) ; }
 
-funcion: INTEGER IDENTIF '(' ')' '{' lista_sentencias '}' { sprintf (temp, "(defun %s ()\n%s)\n", $2.code, $6.code) ; 
-                                                            $$.code = gen_code (temp) ; }
-        ;
+funcion: 
+        IDENTIF '(' lista_parametros ')' '{' 
+        { 
+            strcpy(current_scope, $1.code);
+            num_locals = 0; 
+        } 
+        lista_sentencias '}' 
+        { 
+            sprintf (temp, "(defun %s (%s)\n%s)\n", $1.code, $3.code, $7.code) ; 
+            $$.code = gen_code (temp) ; 
+            strcpy(current_scope, ""); 
+        }
+    ;
+
+lista_parametros:
+                            { $$.code = gen_code(""); }
+    | param                 { $$ = $1; }
+    | lista_parametros ',' param { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
+    ;
+
+param: 
+      INTEGER IDENTIF      
+        { 
+            add_local_var($2.code);
+            $$.code = gen_code($2.code); 
+        }
+    ;
 
 sentencia:    declaracion                         { $$ = $1 ; }
             | IDENTIF '=' expresion               { 
@@ -149,12 +174,25 @@ sentencia:    declaracion                         { $$ = $1 ; }
                     sprintf (temp, "(print \"%s\")", $3.code) ;  
                     $$.code = gen_code (temp) ; 
                 }
+            | RETURN expresion 
+                { 
+                    sprintf(temp, "(return-from %s %s)", current_scope, $2.code);
+                    $$.code = gen_code(temp);
+                }
+            | IDENTIF '(' lista_argumentos ')' 
+                { 
+                    sprintf(temp, "(%s %s)", $1.code, $3.code);
+                    $$.code = gen_code(temp);
+                }
             ;
 
 bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (temp, "(loop while %s do\n%s)", $3.code, $6.code) ;
                                                                   $$.code = gen_code (temp) ; }
                 | FOR '(' IDENTIF '=' expresion ';' expresion ';' iteracion ')' '{' lista_sentencias '}'
-                        { $$.code = generar_for($3.code, $5.code, $7.code, $9.code, $12.code) ; }
+                        { 
+                            char *name = get_var_name($3.code);
+                            $$.code = generar_for(name, $5.code, $7.code, $9.code, $12.code) ; 
+                        }
             
                 | IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
                         { $$.code = generar_if($3.code, $6.code, $8.code) ; }
@@ -185,9 +223,11 @@ default_case:       { $$.code = gen_code ("") ; }
                     $$.code = gen_code (temp) ; }
                 ;
 
-iteracion:   INC '(' IDENTIF ')' { sprintf(temp, "(setf %s (+ %s 1))", $3.code, $3.code); 
+iteracion:   INC '(' IDENTIF ')' {  char *name = get_var_name($3.code);
+                                    sprintf(temp, "(setf %s (+ %s 1))", name, name); 
                                      $$.code = gen_code(temp); }
-             | DEC '(' IDENTIF ')' { sprintf(temp, "(setf %s (- %s 1))", $3.code, $3.code); 
+             | DEC '(' IDENTIF ')' {  char *name = get_var_name($3.code);
+                                    sprintf(temp, "(setf %s (- %s 1))", name, name); 
                                      $$.code = gen_code(temp); }
              ;
 
@@ -270,8 +310,18 @@ operando:   IDENTIF                  {
             }
             | NUMBER                   { sprintf (temp, "%d", $1.value) ; $$.code = gen_code (temp) ; }
             | '(' expresion ')'        { $$ = $2 ; }
+            | IDENTIF '(' lista_argumentos ')' 
+                { 
+                    sprintf(temp, "(%s %s)", $1.code, $3.code);
+                    $$.code = gen_code(temp);
+                }
             ;
 
+lista_argumentos:
+                            { $$.code = gen_code(""); }
+            | expresion             { $$ = $1; }
+            | lista_argumentos ',' expresion { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
+            ;
 
 %%                            // SECCION 4    Codigo en C
 
@@ -415,6 +465,7 @@ typedef struct s_keyword { // para las palabras reservadas de C
 
 t_keyword keywords [] = { // define las palabras reservadas y los
     "main",        MAIN,           // y los token asociados
+    "return",      RETURN,
     "int",         INTEGER,
     "while",       WHILE,
     "if",          IF,
