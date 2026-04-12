@@ -378,6 +378,8 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
     int max_len = strlen(condicion) + strlen(rama_then) + strlen(rama_else) + 100;
     char *resultado = (char *) my_malloc(max_len);
     
+    char *then_alloc = NULL;
+    char *else_alloc = NULL;
     char *then_branch = rama_then;
     char *else_branch = rama_else;
 
@@ -385,6 +387,7 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
     if (strchr(rama_then, '\n') != NULL) {
         then_branch = (char *) my_malloc(strlen(rama_then) + 20);
         sprintf(then_branch, "(progn\n%s)", rama_then);
+        then_alloc = then_branch;
     }
 
     // Evaluamos la rama ELSE (si existe)
@@ -392,6 +395,7 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
         if (strchr(rama_else, '\n') != NULL) {
             else_branch = (char *) my_malloc(strlen(rama_else) + 20);
             sprintf(else_branch, "(progn\n%s)", rama_else);
+            else_alloc = else_branch;
         }
         // Juntamos la versión con ELSE
         sprintf(resultado, "(if %s\n %s\n %s)", condicion, then_branch, else_branch);
@@ -400,13 +404,19 @@ char *generar_if(char *condicion, char *rama_then, char *rama_else)
         sprintf(resultado, "(if %s\n %s)", condicion, then_branch);
     }
 
-    return gen_code(resultado);
+    char *final = gen_code(resultado);
+
+    free(resultado);
+    if (then_alloc) free(then_alloc); // Liberamos la memoria
+    if (else_alloc) free(else_alloc); // Liberamos la memoria
+    return final;
 }
 
 char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, char *body)
 {
     char *init_code;
     char *loop_body;
+    char *loop_alloc = NULL;
     int max_len;
     char *resultado;
 
@@ -417,6 +427,7 @@ char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, c
     // Agregamos al final del cuerpo del bucle la iteracion y contemplamos caso de for vacío
     if (strlen(body) > 0) {
         loop_body = (char *) my_malloc(strlen(body) + strlen(iteration) + 10);
+        loop_alloc = loop_body;
         sprintf(loop_body, "%s\n %s", body, iteration);
     } else {
         loop_body = iteration;
@@ -427,7 +438,12 @@ char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, c
     resultado = (char *) my_malloc(max_len);
     sprintf(resultado, "%s\n(loop while %s do\n %s)", init_code, cond_expr, loop_body);
 
-    return gen_code(resultado);
+    char *final = gen_code(resultado);
+
+    free(resultado);
+    if (init_code) free(init_code); // Liberamos la memoria
+    if (loop_alloc) free(loop_alloc); // Liberamos la memoria
+    return final;
 }
 
 char *my_malloc (int nbytes)       // reserva n bytes de memoria dinamica
