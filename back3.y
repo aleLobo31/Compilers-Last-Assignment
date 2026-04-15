@@ -86,7 +86,7 @@ expression1:  expression                        { ; }  // Lisp can evaluate arit
            
             | '(' PROGN exprSeq ')'             { /* */ }
 
-            | '(' MAIN ')'                      { printf (" main\n") ; } // call to the main function 
+            | '(' MAIN ')'                      { printf ("main\n") ; } // call to the main function 
 
             | '(' DEFUN MAIN                    { printf(": main \n"); } 
                 '(' ')' exprSeq ')'             { printf(" ;\n"); }
@@ -219,6 +219,15 @@ t_keyword keywords [] = {     // define the keywords
     "and",         AND,
     "if",          IF,
     "progn",       PROGN,
+    "mod",         MOD,       
+    "or",          OR,        
+    "not",         NOT,       
+    "=",           EQ,        
+    "/=",          NEQ,       
+    "<=",          LE,        
+    ">=",          GE,        
+    "setq",        SETQ,      
+    "setf",        SETF,
     NULL,          0          // 0 to mark the end of the table
 } ;
 
