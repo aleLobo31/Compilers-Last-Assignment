@@ -247,7 +247,7 @@ declaracion:  INTEGER lista_vars         { $$ = $2 ; }
 
 
 lista_elementos:  ',' elemento                      { $$ = $2 ; }
-            | lista_elementos ',' elemento          { sprintf (temp, "%s %s", $1.code, $3.code) ;  
+            | lista_elementos ',' elemento          { sprintf (temp, "%s\n%s", $1.code, $3.code) ;  
                                                     $$.code = gen_code (temp) ; }
 
 elemento:    expresion          { sprintf (temp, "(princ %s)", $1.code) ; 
