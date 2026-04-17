@@ -90,16 +90,16 @@ char* get_var_name(char *name);         // Obtiene el nombre de una variable
 %token GE            // >=
 
 
-%right '='                    // es la ultima operacion que se debe realizar
+%right '='                    // is the last operation to be performed
 %left OR                      // ||
 %left AND                     // &&
 %left EQ NEQ                  // ==, !=
 %left '<' '>' LE GE           // <, >, <=, >=
-%left '+' '-'                 // menor orden de precedencia
-%left '*' '/' '%'             // orden de precedencia intermedio
-%left UNARY_SIGN NOT          // mayor orden de precedencia
+%left '+' '-'                 // lower precedence
+%left '*' '/' '%'             // intermediate precedence
+%left UNARY_SIGN NOT          // higher precedence
 
-%%                            // Seccion 3 Gramatica - Semantico
+%%                            // Section 3 Grammar - Semantic Actions
 
 axioma:     lista_pre_main main_funcion { printf ("%s%s\n", $1.code, $2.code) ; }
             ;
