@@ -76,13 +76,15 @@ r_exprSeq:    exprSeq                           { ; }
 expression1:  expression                        { ; }  // Lisp can evaluate arithmetical (and similar) expressions in REPL mode
                                                        // REPL Mode should print out the evaluated expressions ==> Future TODO for the Forth translation
 
-            | '(' SETQ IDENTIF number ')'       { printf (" variable %s %s ! \n", $3.code, $4.code) ; }  // This is the declaration of a variable which in Forth has to be of global scope
+            | '(' SETQ IDENTIF NUMBER ')'       { printf (" variable %s \n %d %s ! \n", $3.code, $4.value, $3.code) ; }  // This is the declaration of a variable which in Forth has to be of global scope
                                                                                                       
             | '(' SETF IDENTIF expression ')'   { printf (" %s ! \n", $3.code) ; }    // Using a variable as receiver requires adding the store operator (!) in Forth 
 
             | '(' PRINT STRING ')'              { printf (" .\" %s\" cr \n", $3.code) ; }
 
-            | '(' PRINC expression ')'          { printf (" . \n") ; }    // Princ should be able to print both expreesions and strings
+            | '(' PRINC expression ')'          { printf (" . \n") ; }    // Princ should be able to print expressions
+            
+            | '(' PRINC STRING ')'              { printf (" .\" %s\" \n", $3.code) ; } // Princ should be able to print strings
            
             | '(' PROGN exprSeq ')'             { /* */ }
 
@@ -117,7 +119,7 @@ expression:   operand                                   { ; }                // 
             | '(' '*' expression expression ')'         { printf (" * ") ; }
             | '(' '/' expression expression ')'         { printf (" / ") ; }
             | '(' MOD expression expression ')'         { printf (" mod ") ; }
-            | '(' EQ expression expression ')'          { printf (" = ") ; }
+            | '(' '=' expression expression ')'          { printf (" = ") ; }
             | '(' NEQ expression expression ')'         { printf (" = 0= ") ; } // Forth doesn't have !=, it uses = and then NOT (0=)
             | '(' '<' expression expression ')'         { printf (" < ") ; }
             | '(' '>' expression expression ')'         { printf (" > ") ; }
