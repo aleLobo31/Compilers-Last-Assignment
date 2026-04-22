@@ -101,14 +101,16 @@ char* get_var_name(char *name);         // Obtiene el nombre de una variable
 
 %%                            // Section 3 Grammar - Semantic Actions
 
-axioma:     lista_pre_main main_funcion { printf ("%s%s\n", $1.code, $2.code) ; }
+axioma:     lista_pre_main main_funcion { ; }
             ;
 
-lista_pre_main:                                      { $$.code = gen_code("") ; }
-                | declaracion ';' lista_pre_main     { sprintf (temp, "%s\n%s\n", $1.code, $3.code) ; 
-                                                       $$.code = gen_code (temp) ; }
-                | funcion lista_pre_main             { sprintf (temp, "%s\n%s\n", $1.code, $2.code) ; 
-                                                       $$.code = gen_code (temp) ; }
+lista_pre_main:                         { ; }
+                | declaracion ';' { 
+                    printf ("%s\n", $1.code); // Imprimimos la pieza actual
+                } lista_pre_main            
+                | funcion { 
+                    printf ("%s\n", $1.code); // Imprimimos la función actual
+                } lista_pre_main             
                 ;
 
 main_funcion: 
@@ -121,8 +123,7 @@ main_funcion:
       lista_sentencias '}' 
         { 
             // Acción final
-            sprintf (temp, "(defun main ()\n%s\n)", $6.code) ; 
-            $$.code = gen_code (temp) ; 
+            printf ("\n(defun main ()\n%s\n)\n", $6.code);
             strcpy(current_scope, ""); 
         }
     ;
