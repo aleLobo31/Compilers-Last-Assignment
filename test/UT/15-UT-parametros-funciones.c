@@ -2,8 +2,8 @@
 
 // CEV11.1: Definición de función con parámetros
 // CEV11.2: Retorno de valor mediante sentencia return
-square (int v) {
-    return (v*v) ;
+product (int v, int w) {
+    return (v*w) ;
 }
 
 // CEV11.4: Función recursiva (Llamada a sí misma)
@@ -31,17 +31,18 @@ is_even (int v) {
     return ep ;
 }
 
-main () {
+main() {
     // CEV11.3: Llamada a funciones externas desde el ámbito main
-    printf ("%d\n", square (7)) ;
-    puts (" ") ;
+    printf ("%d\n", square (7, 7)) ;
+    puts("");
     printf ("%d\n", fact (7)) ;
-    puts (" ") ;
+    puts("");
     printf ("%d\n", is_even (7)) ;
-    puts (" ") ;
+    puts("");
     printf ("%d\n", is_even (8)) ;
-    puts (" ") ;
+    puts("");
     is_even (8) ;
+//     system ("pause") ;
 }
 
-//@(main)
+//@ (main)
