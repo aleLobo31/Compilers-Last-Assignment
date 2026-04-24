@@ -33,7 +33,7 @@ is_even (int v) {
 
 main() {
     // CEV11.3: Llamada a funciones externas desde el ámbito main
-    printf ("%d\n", square (7, 7)) ;
+    printf ("%d\n", product (7, 7)) ;
     puts("");
     printf ("%d\n", fact (7)) ;
     puts("");

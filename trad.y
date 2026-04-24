@@ -201,13 +201,17 @@ sentencia:    declaracion                         { $$ = $1 ; }
 bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (temp, "(loop while %s do\n%s)", $3.code, $6.code) ;
                                                                   $$.code = gen_code (temp) ; }
                 | FOR '(' IDENTIF '=' expresion ';' expresion ';' iteracion ')' '{' lista_sentencias '}'
-                        { 
-                            char *name = get_var_name($3.code);
-                            $$.code = generar_for(name, $5.code, $7.code, $9.code, $12.code) ; 
-                        }
+                        {   char *name = get_var_name($3.code);
+                            sprintf (temp, "(setf %s %s)\n(loop while %s do\n%s\n%s)", name, $5.code, $7.code, $12.code, $9.code) ;
+                            $$.code = gen_code (temp) ; }
             
                 | IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
-                        { $$.code = generar_if($3.code, $6.code, $8.code) ; }
+                        { if (strlen($8.code) == 0) {
+                                sprintf (temp, "(if %s \n (progn\n%s))", $3.code, $6.code) ;
+                          } else {
+                                sprintf (temp, "(if %s \n (progn\n%s) \n (progn\n%s))", $3.code, $6.code, $8.code) ;
+                          }
+                        $$.code = gen_code (temp) ; }
                 
                 | SWITCH '(' IDENTIF ')' '{' lista_cases default_case '}' 
                         { sprintf (temp, "(case %s\n%s\n%s)", $3.code, $6.code, $7.code) ; 
@@ -376,80 +380,6 @@ char *char_to_string (char c)
     sprintf (ltemp, "%c", c) ;
 
     return gen_code (ltemp) ;
-}
-
-char *generar_if(char *condicion, char *rama_then, char *rama_else) 
-{
-    // Reservamos la memoria máxima segura (los 3 strings + margen) para bloques con múltiples instrucciones
-    int max_len = strlen(condicion) + strlen(rama_then) + strlen(rama_else) + 100;
-    char *resultado = (char *) my_malloc(max_len);
-    
-    char *then_alloc = NULL;
-    char *else_alloc = NULL;
-    char *then_branch = rama_then;
-    char *else_branch = rama_else;
-
-    // Evaluamos la rama THEN buscando el salto de línea (porque entre sentencias hay un salto de línea)
-    if (strchr(rama_then, '\n') != NULL) {
-        then_branch = (char *) my_malloc(strlen(rama_then) + 20);
-        sprintf(then_branch, "(progn\n%s)", rama_then);
-        then_alloc = then_branch;
-    }
-
-    // Evaluamos la rama ELSE (si existe)
-    if (strlen(rama_else) > 0) {
-        if (strchr(rama_else, '\n') != NULL) {
-            else_branch = (char *) my_malloc(strlen(rama_else) + 20);
-            sprintf(else_branch, "(progn\n%s)", rama_else);
-            else_alloc = else_branch;
-        }
-        // Juntamos la versión con ELSE
-        sprintf(resultado, "(if %s\n %s\n %s)", condicion, then_branch, else_branch);
-    } else {
-        // Juntamos la versión sin ELSE
-        sprintf(resultado, "(if %s\n %s)", condicion, then_branch);
-    }
-
-    char *final = gen_code(resultado);
-
-    free(resultado);
-    if (then_alloc) free(then_alloc); // Liberamos la memoria
-    if (else_alloc) free(else_alloc); // Liberamos la memoria
-    return final;
-}
-
-char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, char *body)
-{
-    char *init_code;
-    char *loop_body;
-    char *loop_alloc = NULL;
-    int max_len;
-    char *resultado;
-
-    // Desenrrollamos la primera parte del bucle con la inicialización del iterador
-    init_code = (char *) my_malloc(strlen(id) + strlen(init_expr) + 20);
-    sprintf(init_code, "(setf %s %s)", id, init_expr);
-
-    // Agregamos al final del cuerpo del bucle la iteracion y contemplamos caso de for vacío
-    if (strlen(body) > 0) {
-        loop_body = (char *) my_malloc(strlen(body) + strlen(iteration) + 10);
-        loop_alloc = loop_body;
-        sprintf(loop_body, "%s\n %s", body, iteration);
-    } else {
-        loop_body = iteration;
-    }
-
-    // Juntamos las dos partes y reservamos memoria
-    max_len = strlen(init_code) + strlen(cond_expr) + strlen(loop_body) + 50;
-    resultado = (char *) my_malloc(max_len);
-    sprintf(resultado, "%s\n(loop while %s do\n %s)", init_code, cond_expr, loop_body);
-
-    char *final = gen_code(resultado);
-
-    free(resultado);
-    if (init_code) free(init_code); // Liberamos la memoria
-    if (loop_alloc) free(loop_alloc); // Liberamos la memoria
-    return final;
 }
 
 char *my_malloc (int nbytes)       // reserva n bytes de memoria dinamica
