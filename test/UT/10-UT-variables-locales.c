@@ -1,9 +1,11 @@
+#include <stdio.h>
+
 int global_var = 100;
 int a;
 
 main() {
     // CEV8.1: Variables locales con prefijo de ámbito
-    // CEV8.2: Conflicto de nombres (Shadowing: a global vs a local)
+    // CEV8.2: Conflicto semántico de nombres (Shadowing: a global vs a local)
     int a = 5;
     int b = 20;
 
@@ -11,9 +13,11 @@ main() {
     a = a + b;
     global_var = global_var + 1;
 
-    // Impresiones
     printf("%d", a);
     puts(" <- Valor de la variable local a");
     printf("%d", global_var);
     puts(" <- Valor de la variable global");
+//     system ("pause") ;
 }
+
+//@ (main)

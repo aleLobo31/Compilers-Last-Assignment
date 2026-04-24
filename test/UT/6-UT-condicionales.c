@@ -1,14 +1,14 @@
+#include <stdio.h>
+
 int x = 10;
 
 main() {
     // CEV7.1 (Sin Else) y CEV7.4 (Sentencia Simple)
-    // -> No debe generar (progn)
     if (x == 10) {
         puts("X es 10");
     }
 
     // CEV7.2 (Con Else) y CEV7.5 (Multiples Sentencias)
-    // -> Debe generar (progn) en ambas ramas
     if (x > 5) {
         puts("Es mayor");
         x = x - 1;
@@ -25,9 +25,7 @@ main() {
     } else {
         puts("Este else pertenece al primer IF gracias a las llaves");
     }
-
-    // CENV7.6 (Condicional Vacío)
-    // -> Límite inferior absoluto: la lista_sentencias es epsilon (vacía)
-    if (x < 0) {
-    }
+//     system ("pause") ;
 }
+
+//@ (main)
