@@ -202,12 +202,16 @@ bloque_control: WHILE '(' expresion ')' '{' lista_sentencias '}'  { sprintf (tem
                                                                   $$.code = gen_code (temp) ; }
                 | FOR '(' IDENTIF '=' expresion ';' expresion ';' iteracion ')' '{' lista_sentencias '}'
                         {   char *name = get_var_name($3.code);
-                            sprintf (temp, "(setf %s %s)\n(loop while %s do\n (progn %s\n %s))", name, $5.code, $7.code, $12.code, $9.code) ;
+                            sprintf (temp, "(setf %s %s)\n(loop while %s do\n%s\n%s)", name, $5.code, $7.code, $12.code, $9.code) ;
                             $$.code = gen_code (temp) ; }
             
                 | IF '(' expresion ')' '{' lista_sentencias '}' resto_condicional 
-                         { sprintf (temp, "(if %s \n (progn\n%s) \n (progn\n%s))",$3.code, $6.code, $8.code) ;
-                         $$.code = gen_code (temp) ; }
+                        { if (strlen($8.code) == 0) {
+                                sprintf (temp, "(if %s \n (progn\n%s))", $3.code, $6.code) ;
+                          } else {
+                                sprintf (temp, "(if %s \n (progn\n%s) \n (progn\n%s))", $3.code, $6.code, $8.code) ;
+                          }
+                        $$.code = gen_code (temp) ; }
                 
                 | SWITCH '(' IDENTIF ')' '{' lista_cases default_case '}' 
                         { sprintf (temp, "(case %s\n%s\n%s)", $3.code, $6.code, $7.code) ; 
