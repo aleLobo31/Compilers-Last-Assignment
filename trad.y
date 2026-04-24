@@ -101,14 +101,16 @@ char* get_var_name(char *name);         // Obtiene el nombre de una variable
 
 %%                            // Section 3 Grammar - Semantic Actions
 
-axioma:     lista_pre_main main_funcion { printf ("%s%s\n", $1.code, $2.code) ; }
+axioma:     lista_pre_main main_funcion { ; }
             ;
 
-lista_pre_main:                                      { $$.code = gen_code("") ; }
-                | lista_pre_main declaracion ';'     { sprintf (temp, "%s\n%s\n", $1.code, $2.code) ; 
-                                                       $$.code = gen_code (temp) ; }
-                | lista_pre_main funcion             { sprintf (temp, "%s\n%s\n", $1.code, $2.code) ; 
-                                                       $$.code = gen_code (temp) ; }
+lista_pre_main:                         { ; }
+                | declaracion ';' { 
+                    printf ("%s\n", $1.code); // Imprimimos la pieza actual
+                } lista_pre_main            
+                | funcion { 
+                    printf ("%s\n", $1.code); // Imprimimos la función actual
+                } lista_pre_main             
                 ;
 
 main_funcion: 
@@ -121,21 +123,20 @@ main_funcion:
       lista_sentencias '}' 
         { 
             // Acción final
-            sprintf (temp, "(defun main ()\n%s\n)", $6.code) ; 
-            $$.code = gen_code (temp) ; 
+            printf ("\n(defun main ()\n%s\n)\n", $6.code);
             strcpy(current_scope, ""); 
         }
     ;
 
 
 lista_sentencias:                                   { $$.code = gen_code("") ; }
-                | lista_sentencias sentencia ';'    { if (strlen($1.code) == 0) 
-                                                          sprintf (temp, "%s", $2.code) ;
+                | sentencia ';' lista_sentencias    { if (strlen($3.code) == 0) 
+                                                          sprintf (temp, "%s", $1.code) ;
                                                       else 
-                                                          sprintf (temp, "%s\n%s", $1.code, $2.code) ;
+                                                          sprintf (temp, "%s\n%s", $1.code, $3.code) ;
                                                       $$.code = gen_code (temp) ; }
-                | lista_sentencias bloque_control   { if (strlen($1.code) == 0) 
-                                                          sprintf (temp, "%s", $2.code) ;
+                | bloque_control lista_sentencias   { if (strlen($2.code) == 0) 
+                                                          sprintf (temp, "%s", $1.code) ;
                                                       else 
                                                           sprintf (temp, "%s\n%s", $1.code, $2.code) ;
                                                       $$.code = gen_code (temp) ; }
@@ -157,7 +158,7 @@ funcion:
 lista_parametros:
                             { $$.code = gen_code(""); }
     | param                 { $$ = $1; }
-    | lista_parametros ',' param { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
+    | param ',' lista_parametros { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
     ;
 
 param: 
@@ -218,8 +219,7 @@ resto_condicional:                                  { $$.code = gen_code ("") ; 
                 ;
 
 lista_cases:            { $$.code = gen_code ("") ; }                                        
-                | lista_cases base_case 
-                        { sprintf (temp, "%s %s", $1.code, $2.code) ; 
+                | base_case lista_cases { sprintf (temp, "%s %s", $1.code, $2.code) ; 
                         $$.code = gen_code (temp) ; }
                 ;
 
@@ -247,8 +247,9 @@ declaracion:  INTEGER lista_vars         { $$ = $2 ; }
 
 
 lista_elementos:  ',' elemento                      { $$ = $2 ; }
-            | lista_elementos ',' elemento          { sprintf (temp, "%s\n%s", $1.code, $3.code) ;  
+            | ',' elemento lista_elementos { sprintf (temp, "%s\n%s", $2.code, $3.code) ;  
                                                     $$.code = gen_code (temp) ; }
+            ;
 
 elemento:    expresion          { sprintf (temp, "(princ %s)", $1.code) ; 
                                 $$.code = gen_code (temp) ; }
@@ -257,7 +258,7 @@ elemento:    expresion          { sprintf (temp, "(princ %s)", $1.code) ;
             ;
 
 lista_vars:   var_init                   { $$ = $1 ; }
-            | lista_vars ',' var_init    { sprintf (temp, "%s %s", $1.code, $3.code) ;
+            | var_init ',' lista_vars    { sprintf (temp, "%s %s", $1.code, $3.code) ;
                                            $$.code = gen_code (temp) ; }
             ;
 
@@ -344,7 +345,7 @@ operando:   IDENTIF                  {
 lista_argumentos:
                             { $$.code = gen_code(""); }
             | expresion             { $$ = $1; }
-            | lista_argumentos ',' expresion { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
+            | expresion ',' lista_argumentos { sprintf(temp, "%s %s", $1.code, $3.code); $$.code = gen_code(temp); }
             ;
 
 %%                            // SECCION 4    Codigo en C
