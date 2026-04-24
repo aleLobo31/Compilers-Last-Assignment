@@ -1,3 +1,8 @@
+/*
+202 , Alejandro Pérez Montes , Alejandro De Santos Lobo
+100499978@alumnos.uc3m.es ,  100499148@alumnos.uc3m.es
+*/
+
 %{                          // SECTION 1 Declarations for C-Bison
 #include <stdio.h>
 #include <ctype.h>            // tolower()
