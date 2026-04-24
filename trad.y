@@ -14,12 +14,9 @@
 
 int yylex () ;
 int yyerror () ;
-char *mi_malloc (int) ;
 char *gen_code (char *) ;
 char *int_to_string (int) ;
 char *char_to_string (char) ;
-char *generar_if (char *, char *, char *) ;
-char *generar_for(char *id, char *init_expr, char *cond_expr, char *iteration, char *body);
 char *my_malloc (int) ;
 
 char temp [2048] ;
