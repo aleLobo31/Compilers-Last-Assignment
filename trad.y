@@ -87,14 +87,14 @@ char* get_var_name(char *name);         // Obtiene el nombre de una variable
 %token GE            // >=
 
 
-%right '='                    // is the last operation to be performed
+%right '='                    // es la ultima operacion que se debe realizar
 %left OR                      // ||
 %left AND                     // &&
 %left EQ NEQ                  // ==, !=
 %left '<' '>' LE GE           // <, >, <=, >=
-%left '+' '-'                 // lower precedence
-%left '*' '/' '%'             // intermediate precedence
-%left UNARY_SIGN NOT          // higher precedence
+%left '+' '-'                 // menor orden de precedencia
+%left '*' '/' '%'             // orden de precedencia intermedio
+%left UNARY_SIGN NOT          // mayor orden de precedencia
 
 %%                            // Section 3 Grammar - Semantic Actions
 
