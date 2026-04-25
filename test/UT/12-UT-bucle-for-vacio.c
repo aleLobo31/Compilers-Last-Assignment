@@ -6,7 +6,7 @@
 int z;
 
 main() {
-    // CEV9.4: Bucle For Vacío
+    // CENV9.4: Bucle For Vacío
     for (z = 0; z < 5; INC(z)) {
     }
 //     system ("pause") ;

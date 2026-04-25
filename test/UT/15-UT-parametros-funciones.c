@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-// CEV11.1: Definición de función con parámetros
+// CEV11.1: Definición de función con parámetros (más de 1)
 // CEV11.2: Retorno de valor mediante sentencia return
 product (int v, int w) {
     return (v*w) ;
@@ -18,6 +18,7 @@ fact (int n) {
     return f ;
 }
 
+// VLV11.1: Definición de función con un parámetro
 is_even (int v) {
     int ep ;
     printf("%d", v) ;

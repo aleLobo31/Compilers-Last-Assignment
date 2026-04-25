@@ -3,7 +3,7 @@
 int x = 10;
 
 main() {
-    // CEV7.6 Condicional Vacío
+    // CENV7.6 Condicional Vacío
     if (x == 10) {
     }
 //     system ("pause") ;
